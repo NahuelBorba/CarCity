@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>CarCity — Fase 1.69.112</title>
+<title>CarCity — Fase 1.69.113</title>
 <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#9fd6ec;--card:#fffaf0;--ink:#1d2733;--red:#e8452c;--yel:#ffc933;--grn:#2fa84f;--mute:#5a6775;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -2116,13 +2116,14 @@ function seatFacing(i){
 }
 // 1.69.110: upholstery with correctly rotated geometry and depth sorting.
 function sillon(x,y,layer="all"){
- const parts=[[0,0,26,28,7,0,'#29466c',6],[-2,0,21,19,5,7,'#7199c7',6],[9,0,9,27,21,0,'#456b9d',4.5],[-2,-12,24,7,15,0,'#527caf',3.5],[-2,12,24,7,15,0,'#527caf',3.5]];
  const a=activeFurniture?.a||0,c=Math.cos(a),sn=Math.sin(a);
- parts.sort((p,q)=>{const depth=t=>(t[0]*c-t[1]*sn)+(t[0]*sn+t[1]*c);return depth(p)-depth(q)});
- // Base and cushion always precede the upright upholstery.
- for(const p of [parts.find(t=>t[5]===0&&t[4]===7),parts.find(t=>t[5]===7),...parts.filter(t=>t[4]===21||t[4]===15)]){
-  const [dx,dy,w,d,h,z,col,r]=p;const near=h===15&&dy*(c-sn)>0 || h===21&&(c+sn)>0; if(layer==="back"&&near||layer==="front"&&!near)continue;roundedBody(x+dx,y+dy,w,d,h,0,col,z,r);
- }
+ const draw=(p)=>{const [dx,dy,w,d,h,z,col,r]=p;roundedBody(x+dx,y+dy,w,d,h,0,col,z,r);};
+ const base=[[0,0,27,29,5,0,'#29466c',3],[-2,0,23,23,5,5,'#537dad',3],[-3,0,21,21,3,10,'#82a6cf',4]];
+ const sides=[[9,0,8,28,22,3,'#456b9d',3],[-2,-12,24,6,9,5,'#527caf',3],[-2,12,24,6,9,5,'#527caf',3]];
+ const depth=p=>p[0]*(c+sn)+p[1]*(c-sn);
+ sides.sort((p,q)=>depth(p)-depth(q));
+ if(layer!=="front"){draw(base[0]);for(const p of sides.filter(p=>depth(p)<=0))draw(p);draw(base[1]);draw(base[2]);}
+ if(layer!=="back")for(const p of sides.filter(p=>depth(p)>0))draw(p);
 }
 function mesa(x,y){roundedBody(x,y,17,33,8,0,'#bd8956',0,4);roundedBody(x,y,17,33,1.1,0,'#e3b57d',8,5);roundedBody(x,y-8,9,12,1,0,'#e8452c',8,2);roundedBody(x,y+3,9,10,1,0,'#2fa84f',8,2);ball(x+1,y+11,9.5,2.6,'#fffaf0')}
 function cafe(x,y){roundedBody(x,y,19,27,14,0,'#d8c49f',0,4);roundedBody(x+1,y-3,11,13,16,0,'#3a3f4a',14,3);ball(x-3,y+9,16.5,2.2,'#fffaf0');ball(x+3,y+9,16.5,2.2,'#ffc933')}
