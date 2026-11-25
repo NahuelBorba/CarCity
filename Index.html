@@ -237,7 +237,7 @@ function withFurniture(k,fn){
   }
  }finally{activeFurniture=old}
 }
-function rotateFurniture(k,dir){if(J.some(j=>j&&j.st==='k'&&j.seat236===k)){toast('Sillón ocupado');return;}if(!k||!FURN[k])return;if(k.startsWith('lift')&&J[Number(k.slice(4))]){toast('Esperá a que el elevador esté libre');return}const old=furnitureAngle(k);S.furnitureRot[k]=(old+dir+4)%4;const p=furniturePos(k);if(!canPlaceFurniture(k,p[0],p[1])){S.furnitureRot[k]=old;toast('No hay espacio para girar este objeto');return}save();editHud();toast(FURN[k][0]+' girado 90°')}
+function rotateFurniture(k,dir){if(J.some(j=>j&&j.st==='k'&&j.seat236===k)){toast('Sillón ocupado');return;}if(!k||!FURN[k])return;if(k.startsWith('lift')&&J[Number(k.slice(4))]){toast('Esperá a que el elevador esté libre');return}const old=furnitureAngle(k);S.furnitureRot[k]=(old+dir+4)%4;const p=furniturePos(k);if(!canPlaceFurniture(k,p[0],p[1])){S.furnitureRot[k]=old;toast('No hay espacio o se bloquea el acceso a un elevador');return}save();editHud();toast(FURN[k][0]+' girado 90°')}
 let editMode=false,selectedFurniture=null,dragFurniture=null;
 let editGrid=localStorage.getItem("tt_edit_grid")!=="off",editSnap=localStorage.getItem("tt_edit_snap")!=="off";
 const snapFurniture=n=>editSnap?Math.round(n/10)*10:Math.round(n);
@@ -533,12 +533,35 @@ function wallOccupied(k,x,y){
 // Dynamic navigation: no permanently reserved interior lane.
 function carLaneConflict1693(k,x,y){return false;}
 function columnConflict178(x,y,w,h){for(const [c,r] of S.plots){const q=plotRect(c,r);for(const horizontal of [true,false]){if(horizontal?hasPlot(c,r+1):hasPlot(c-1,r))continue;const length=horizontal?320:240;for(let u=0;u<=length;u+=80){const along=u;const cx=q.x0+(horizontal?along:0),cy=q.y0+(horizontal?0:along);if(Math.abs(x-cx)<w/2+10&&Math.abs(y-cy)<h/2+10)return true;}}}return false;}
+// Validate permanent circulation with the same planner as actual vehicles.
+function liftAccessible252(i){
+ const [x,y]=LP(i,G());
+ return !!planCar129({bay:i,st:'in',car:{x:320,y:440}},true)&&!!planCar129({bay:i,st:'out',car:{x,y}},true);
+}
+let routeCache252=new Map();
+function layoutAccessible252(k,x,y){
+ const sig=JSON.stringify([S.plots,S.u,Object.keys(FURN).filter(v=>v===k||furnitureVisible(v)).map(v=>[v,v===k?[x,y]:furniturePos(v),furnitureAngle(v)])]);
+ if(routeCache252.has(sig))return routeCache252.get(sig);
+ const old=S.furniture[k],had=Object.prototype.hasOwnProperty.call(S.furniture,k);
+ const pending=k.startsWith('decor232_')&&!furnitureExists(k);
+ if(pending)S.decor232.push({id:k});
+ S.furniture[k]=[x,y];let ok=false;
+ try{ok=Array.from({length:S.u.l},(_,i)=>i).every(liftAccessible252);}
+ finally{if(had)S.furniture[k]=old;else delete S.furniture[k];if(pending)S.decor232.pop();}
+ if(routeCache252.size>150)routeCache252.clear();routeCache252.set(sig,ok);return ok;
+}
+function equipmentSpot252(k){
+ const original=furniturePos(k), candidates=[original];
+ for(const [c,r] of S.plots){if(r<0)continue;const q=plotRect(c,r);for(let y=q.y0+20;y<q.y1;y+=20)for(let x=q.x0+20;x<q.x1;x+=20)candidates.push([x,y]);}
+ candidates.sort((a,b)=>Math.hypot(a[0]-original[0],a[1]-original[1])-Math.hypot(b[0]-original[0],b[1]-original[1]));
+ return candidates.find(([x,y])=>canPlaceFurniture(k,x,y));
+}
 function canPlaceFurniture(k,x,y){const [w,h]=furnitureDims(k);
  if(!Number.isFinite(x)||!Number.isFinite(y))return false;
  if(wallFurniture(k))return wallAccessorySlots177().some(e=>Math.hypot(e.x-x,e.y-y)<1)&&!wallOccupied(k,x,y);
  if(!inBuiltArea(x,y,w,h)||columnConflict178(x,y,w,h))return false;
  if(J.some(j=>j&&j.car&&Math.abs(x-j.car.x)<w/2+32&&Math.abs(y-j.car.y)<h/2+32))return false;
- return !occupied(x,y,w,h,k);
+ return !occupied(x,y,w,h,k)&&layoutAccessible252(k,x,y);
 }
 // 1.68.11: los objetos de pared se adhieren a la pared exterior más cercana.
 // Los demás muebles siguen pudiendo cruzar libremente entre parcelas propias.
@@ -552,7 +575,7 @@ function moveFurniture(k,x,y){if(J.some(j=>j&&j.st==='k'&&j.seat236===k)){toast(
  if(k.startsWith('lift')&&J[Number(k.slice(4))]){toast('Esperá a que el elevador esté libre');return false}
  x=snapFurniture(x);y=snapFurniture(y);
  [x,y]=snapToExteriorWall(k,x,y);
- if(!canPlaceFurniture(k,x,y)){toast(wallFurniture(k)?'Colocá este objeto junto a una pared exterior libre':carLaneConflict1693(k,x,y)?'Dejá libre el recorrido de los autos':'Elegí un lugar libre dentro del taller');return false}
+ if(!canPlaceFurniture(k,x,y)){toast(wallFurniture(k)?'Colocá este objeto junto a una pared exterior libre':carLaneConflict1693(k,x,y)?'Dejá libre el recorrido de los autos':'Elegí un lugar libre que no bloquee los elevadores');return false}
  S.furniture[k]=[x,y];save();toast(FURN[k][0]+' ubicado');return true;
 }
 // Migración conservadora: reubicar solamente muebles que ya invaden un carril.
@@ -1017,10 +1040,14 @@ function advanceQueue(dt){
 function acceptJob(id){const k=Q.findIndex(q=>q.id===id);if(k<0)return;
  if(k>0){toast('Esperá tu turno: primero debe avanzar el auto de adelante');return}
  if(J.some(j=>j&&['in','inwait','out'].includes(j.st))){toast('Esperá a que termine la maniobra del otro auto');return}
- const free=Array.from({length:S.u.l},(_,i)=>i).find(i=>!J[i]);
+ let free=Array.from({length:S.u.l},(_,i)=>i).find(i=>!J[i]);
  if(free===undefined){toast('Todos los elevadores están ocupados');return}
  const q=Q[k];if(S.m<q.cost){toast('Necesitás $'+f(q.cost)+' para los repuestos');return}
- const [startX,startY]=queuedPos(q,k);Q.splice(k,1);S.m-=q.cost;
+ const [startX,startY]=queuedPos(q,k);
+ const available=Array.from({length:S.u.l},(_,i)=>i).filter(i=>!J[i]);
+ free=available.find(i=>planCar129({bay:i,st:'in',car:{x:startX,y:startY}})!==null);
+ if(free===undefined){toast('No hay recorrido libre hacia los elevadores. Revisá el mobiliario.');return;}
+ Q.splice(k,1);S.m-=q.cost;
  const g=G(),[lx,ly]=LP(free,g),[sx,sy]=[startX,startY];
  // Entrada por un único carril: no adelantar ni cambiar de carril.
  // El portón serializa las maniobras; si otro vehículo está entrando, esperamos.
@@ -1102,12 +1129,17 @@ function segmentDistance81(x,y,ax,ay,bx,by){
  const t=l?Math.max(0,Math.min(1,((x-ax)*dx+(y-ay)*dy)/l)):0;
  return Math.hypot(x-ax-t*dx,y-ay-t*dy);
 }
-function mechanicHome81(i,g){const [x,y]=LP(i,g),working=J[i]?.st==='k',o=(working?[[0,49],[-49,0],[0,-49],[49,0]]:[[0,83],[-83,0],[0,-83],[83,0]])[furnitureAngle('lift'+i)%4];return [x+o[0],y+o[1]];}
+function mechanicHome81(i,g){
+ const [x,y]=LP(i,g),working=J[i]?.st==='k',angle=furnitureAngle('lift'+i)%4;
+ const offsets=working?[[0,49],[55,0],[-55,0],[0,83]]:[[0,83],[65,0],[-65,0],[0,-83]];
+ const candidates=offsets.map(([u,v])=>{for(let n=0;n<angle;n++)[u,v]=[-v,u];return [x+u,y+v];});
+ return candidates.find(([a,b])=>inBuiltArea(a,b,16,16)&&!occupied(a,b,16,16,'lift'+i))||candidates[0];
+}
 function updateMechanics81(dt,g){
  const moving=J.filter(j=>j&&j.car&&['in','out','inwait'].includes(j.st)).map(j=>j.car);
  const parked=J.filter(j=>j&&j.car&&!moving.includes(j.car)).map(j=>j.car);
  const segments=[];for(const c of moving){let a=[c.x,c.y];for(const b of c.path||[]){segments.push([a,b]);a=b;}}
- const safe=(x,y)=>segments.every(([a,b])=>segmentDistance81(x,y,...a.slice(0,2),...b.slice(0,2))>=76);
+ const safe=(x,y)=>segments.every(([a,b])=>segmentDistance81(x,y,...a.slice(0,2),...b.slice(0,2))>=54);
  for(let i=0;i<S.u.l;i++){
   const home=mechanicHome81(i,g),[lx,ly]=LP(i,g),key='lift'+i;
   let m=mechanicPositions81[i];if(!m)m=mechanicPositions81[i]={x:home[0],y:home[1],rot:0};m.hx=home[0];m.hy=home[1];
@@ -1121,12 +1153,12 @@ function updateMechanics81(dt,g){
     const candidates=[];
     for(const [c,r] of S.plots){const q=plotRect(c,r);for(let x=q.x0+16;x<q.x1-15;x+=12)for(let y=q.y0+16;y<q.y1-15;y+=12)if(valid(x,y))candidates.push([x,y]);}
     candidates.sort((a,b)=>Math.hypot(a[0]-m.x,a[1]-m.y)-Math.hypot(b[0]-m.x,b[1]-m.y));
-    for(const p of candidates.slice(0,12)){const route=pedestrianRoute104(m.x,m.y,[p],null);if(route?.length&&Math.hypot(route.at(-1)[0]-p[0],route.at(-1)[1]-p[1])<2){m.refuge115=p;m.navPath104=route;m.navTarget104=p.join(',');break;}}
+    for(const p of candidates.slice(0,12)){const route=pedestrianRoute104(m.x,m.y,[p],key);if(route?.length&&Math.hypot(route.at(-1)[0]-p[0],route.at(-1)[1]-p[1])<2){m.refuge115=p;m.navPath104=route;m.navTarget104=p.join(',');break;}}
    }
    target=m.refuge115||[m.x,m.y];
   }else m.refuge115=null;
   const tk=target.join(',');
-  if(m.navTarget104!==tk&&performance.now()>=(m.navRetry132||0)){m.navRetry132=performance.now()+250;m.navTarget104=tk;m.navPath104=pedestrianRoute104(m.x,m.y,[target],mustYield?null:key)||[];}
+  if((m.navTarget104!==tk||(!m.navPath104?.length&&Math.hypot(m.x-target[0],m.y-target[1])>5))&&performance.now()>=(m.navRetry132||0)){m.navRetry132=performance.now()+250;m.navTarget104=tk;m.navPath104=pedestrianRoute104(m.x,m.y,[target],key)||[];}
   while(m.navPath104?.length&&Math.hypot(m.x-m.navPath104[0][0],m.y-m.navPath104[0][1])<.5)m.navPath104.shift();
   const next=m.navPath104?.[0]||[m.x,m.y],dx=next[0]-m.x,dy=next[1]-m.y,d=Math.hypot(dx,dy),step=Math.min(d,dt*105);
   m.walk=false;if(d>0){const nx=m.x+dx/d*step,ny=m.y+dy/d*step;
@@ -1138,7 +1170,7 @@ function updateMechanics81(dt,g){
  mechanicPositions81.length=S.u.l;
 }
 // 1.69.133: grid A* with swept vehicle footprint, cardinal headings.
-function planCar129(job){
+function planCar129(job,layoutOnly=false){
  const c=job.car, out=job.st==='out', bay=job.bay, lift='lift'+bay;
  const center=LP(bay,G()), angle=furnitureAngle(lift)%4, axis=[[0,1],[-1,0],[0,-1],[1,0]][angle], start=[c.x,c.y];
  const approachDistance=[76,66,56,50,40].find(d=>{const x=center[0]+axis[0]*d,y=center[1]+axis[1]*d;return inBuiltArea(x,y,80,80);})??50;
@@ -1147,7 +1179,7 @@ function planCar129(job){
  const goal=out?[320,440]:approach;
  const plots=S.plots.filter(p=>p[1]>=0).map(p=>plotRect(...p));
  const rects=Object.keys(FURN).filter(k=>k!==lift&&furnitureVisible(k)&&!wallFurniture(k)).map(k=>furnitureFootprint(k,...furniturePos(k)));
- const parked=J.filter(j=>j&&j!==job&&j.car&&j.st!=='inwait').map(j=>j.car);
+ const parked=layoutOnly?[]:J.filter(j=>j&&j!==job&&j.car&&j.st!=='inwait').map(j=>j.car);
  const inside=(x,y)=>plots.some(r=>x>=r.x0&&x<=r.x1&&y>=r.y0&&y<=r.y1)||(y>=400&&y<=550&&Math.abs(x-320)<=45);
  const ok=(x,y,dir)=>{const hx=dir===0?35:22,hy=dir===0?22:35;
   for(const u of [-hx,0,hx])for(const v of [-hy,0,hy])if(!inside(x+u,y+v))return false;
@@ -1205,7 +1237,7 @@ function moveCarWithTraffic(job,dt,speed){
   return Math.hypot(px-(ax+vx*t),py-(ay+vy*t));
  }
  const clearance=61;
- const blocked=obstacles.some(o=>segDist(o.x,o.y,c.x,c.y,nx,ny)<clearance&&Math.hypot(nx-o.x,ny-o.y)<=Math.hypot(c.x-o.x,c.y-o.y)+.0001)||mechanicPositions81.some(m=>m&&segDist(m.x,m.y,c.x,c.y,nx,ny)<76&&Math.hypot(nx-m.x,ny-m.y)<=Math.hypot(c.x-m.x,c.y-m.y));
+ const blocked=obstacles.some(o=>segDist(o.x,o.y,c.x,c.y,nx,ny)<clearance&&Math.hypot(nx-o.x,ny-o.y)<=Math.hypot(c.x-o.x,c.y-o.y)+.0001)||mechanicPositions81.some(m=>m&&segDist(m.x,m.y,c.x,c.y,nx,ny)<48&&Math.hypot(nx-m.x,ny-m.y)<=Math.hypot(c.x-m.x,c.y-m.y));
  if(blocked){
   c.driveSpeed=Math.max(0,(c.driveSpeed||0)-900*dt);
   // El carril de acceso y el de salida son independientes. En cruces
@@ -3153,7 +3185,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-t],[data-a
  }
  else if(a==='accept'){acceptJob(+i);return}
  else if(a==='collect'){act(+i);return}
-  if(a==='up'){const u=UPS.find(x=>x.k===i);if(!u||S.u[i]>=u.max||!u.cap(S.u[i]))return;const c=Math.round(u.c(S.u[i]));if(Number.isFinite(c)&&S.m>=c){S.m-=c;if(i==='l'||i==='t'){S.paid236=S.paid236||{};S.paid236[i+S.u[i]]=c;}S.u[i]++;if(i==='g'){camG=-1;GK=-1;toast('¡Garaje ampliado! Más espacio disponible 🏗️')}else toast(u.n+' mejorado')}}
+  if(a==='up'){const u=UPS.find(x=>x.k===i);if(!u||S.u[i]>=u.max||!u.cap(S.u[i]))return;const c=Math.round(u.c(S.u[i]));if(Number.isFinite(c)&&S.m>=c){if(i==='l'||i==='t'||i==='rec'){const k=i==='rec'?'desk':(i==='l'?'lift':'tool')+S.u[i];S.u[i]++;let spot;try{spot=equipmentSpot252(k);}finally{S.u[i]--;}if(!spot){toast('No hay espacio con acceso libre a todos los elevadores');return;}S.furniture[k]=spot;}S.m-=c;if(i==='l'||i==='t'){S.paid236=S.paid236||{};S.paid236[i+S.u[i]]=c;}S.u[i]++;if(i==='g'){camG=-1;GK=-1;toast('¡Garaje ampliado! Más espacio disponible 🏗️')}else toast(u.n+' mejorado')}}
  else if(a==='buy'){const c=CA[i][5];if(c>0&&!S.own.includes(+i)&&S.m>=c){S.m-=c;S.own.push(+i);S.sel<0&&(S.sel=+i);toast(CA[i][0]+' es tuyo')}}
  else if(a==='gacha'){if(S.m<600)return;S.m-=600;const r=Math.random()*100,k=r<55?'C':r<83?'R':r<96?'E':'L',ls=CA.map((c,i)=>c[1]===k?i:-1).filter(x=>x>=0),id=ls[Math.random()*ls.length|0];
   last=id;if(S.own.includes(id)){S.m+=RA[k][3];toast('Repetido: +$'+RA[k][3])}else{S.own.push(id);S.sel<0&&(S.sel=id)}}
