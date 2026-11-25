@@ -2715,16 +2715,22 @@ function furnitureGroundShadow(x,y,w,d,opacity=.15){
  const p=pj(x,y,.3),im=furnitureGroundShadow.tile;
  X.save();X.globalAlpha=Math.min(.36,opacity*1.7);X.drawImage(im,p[0]-w*K*.62+5*K,p[1]-d*K*.38+5*K,w*K*1.24,d*K*.76);X.globalAlpha=Math.min(.36,opacity*1.5);X.drawImage(im,p[0]-w*K*.46,p[1]-d*K*.23,w*K*.92,d*K*.46);X.restore();
 }
+// 250: mask only the portions of rear objects hidden by solid wall geometry.
+function wallOccluders250(){const out=[];for(const [c,r] of S.plots){const t=plotRect(c,r);if(!hasPlot(c,r+1))out.push({axis:1,f:t.y0,a:t.x0,b:t.x1});if(!hasPlot(c-1,r))out.push({axis:0,f:t.x0,a:t.y0,b:t.y1});}return out;}
+function clipRear250(x,y,walls){for(const w of walls){const normal=w.axis?y:x,along=w.axis?x:y;if(normal>=w.f||along<w.a-100||along>w.b+100||normal<w.f-180)continue;
+ const pts=[];for(const u of [w.a-9,w.b+9])for(const v of [w.f-9,w.f+9])for(const z of [0,56])pts.push(w.axis?pj(u,v,z):pj(v,u,z));
+ pts.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);const half=arr=>{const h=[];for(const p of arr){while(h.length>1&&cross(h[h.length-2],h[h.length-1],p)<=0)h.pop();h.push(p);}return h.slice(0,-1);};const hull=half(pts).concat(half([...pts].reverse()));if(hull.length<3)continue;
+ X.beginPath();X.rect(-50000,-50000,100000,100000);X.moveTo(...hull[0]);for(const p of hull.slice(1))X.lineTo(...p);X.closePath();X.clip('evenodd');}}
 function draw(){syncDecor232();terrainUpdate();X.clearRect(0,0,VW,VH);if(RC){X.fillStyle='#4a525c';X.fillRect(0,0,VW,VH);const k=Math.min(VW/640,VH/480);X.save();X.translate((VW-640*k)/2,(VH-480*k)/2);X.scale(k,k);drawRace();X.restore();return}
  const g=G(),tm=performance.now()/1000,I=[],add=(k,f)=>I.push([k,f]);
  // Los personajes se recopilan mientras se dibujan objetos, paredes y elevadores.
  chibiForegroundQueue=[];
- if(camG!==S.u.g){terrainPositionCache.clear();fit();camG=S.u.g}const ck=[S.u.g,cam.z,cam.cx,cam.cy,VW,VH,TT_RENDER_SCALE].join();if(GK!==ck||!GC)bake(g,ck);X.drawImage(GC,0,0,VW,VH);X.save();camT();drawEditGrid();
+ if(camG!==S.u.g){terrainPositionCache.clear();fit();camG=S.u.g}const ck=[S.u.g,cam.z,cam.cx,cam.cy,VW,VH,TT_RENDER_SCALE].join();if(GK!==ck||!GC)bake(g,ck);X.drawImage(GC,0,0,VW,VH);X.save();camT();drawEditGrid();const walls250=wallOccluders250();
  // Los terrenos contiguos muestran sus obstáculos hasta que sean retirados.
  for(const [c,r] of allPlotCells())if(canPlot(c,r)){
   const pr=plotRect(c,r),items=plotObstacles(c,r);
   items.forEach((o,k)=>{if(o.done||!terrainClearOfWalls(c,r,k,o)) return;const [xx,yy]=terrainLocation(c,r,k);
-   add(xx+yy,()=>{if(o.type==='tree'){
+   add(xx+yy,()=>{X.save();clipRear250(xx,yy,walls250);try{if(o.type==='tree'){
      const big=o.size==='large',small=o.size==='small';
      const mult=terrainVisualScale(c,r,o);
      const crown=(big?12:small?7:9)*mult,high=(big?19:small?11:15)*mult;
@@ -2736,9 +2742,9 @@ function draw(){syncDecor232();terrainUpdate();X.clearRect(0,0,VW,VH);if(RC){X.f
    }else{
      const scale=(o.size==='large'?.42:o.size==='medium'?.32:.24)*Math.min(terrainVisualScale(c,r,o),1.35);
      rock136(xx,yy,scale);
-   }
+    }}finally{X.restore();}
 
-   });
+    });
   });
  }
  // Parcelas señalizadas con contorno y botón + semitransparente.
@@ -2776,7 +2782,7 @@ function draw(){syncDecor232();terrainUpdate();X.clearRect(0,0,VW,VH);if(RC){X.f
   }
   if(!hasPlot(col+1,row)){
    const end=t.y1-(hasPlot(col+1,row-1)?24:0);
-   for(let y=t.y0;y<end;y+=40){const h=Math.min(40,end-y);if(h>0)add(t.x1+4+y+h/2,()=>box(t.x1+4,y+h/2,8,h,10,0,'#f1f4f7','#cfd6de'));}
+   for(let y=t.y0;y<end;y+=40){const h=Math.min(40,end-y);if(h>0)add(t.x1+4+y+h/2,()=>{X.save();clipRear250(t.x1+4,y+h/2,walls250);try{box(t.x1+4,y+h/2,8,h,10,0,'#f1f4f7','#cfd6de');}finally{X.restore();}});}
   }
  }
  // Puerta seccional sugerida y marquesina de acceso en la fachada.
