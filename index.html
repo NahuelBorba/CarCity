@@ -1312,7 +1312,7 @@ function hitQueuedCustomer(e){
   for(let i=0;i<Q.length;i++){
     const [qx,qy]=queuedPos(Q[i],i),p=pj(qx,qy,10);
     const dx=px-p[0],dy=py-p[1];
-    const d=(dx/65)**2+(dy/62)**2;
+    const label=pj(qx,qy,65);const d=Math.min((dx/65)**2+(dy/62)**2,((px-label[0])/105)**2+((py-label[1])/30)**2);
     if(d<1&&d<dist){best=Q[i].id;dist=d;}
   }
   if(best===null)return false;
@@ -2416,8 +2416,7 @@ function drum(x,y,variant=0){
 }
 function glow(x,y,R,c,sy){X.save();X.translate(x,y);X.scale(1,sy);const gr=X.createRadialGradient(0,0,0,0,0,R);gr.addColorStop(0,c);gr.addColorStop(1,c.replace(/[\d.]+\)$/,'0)'));X.fillStyle=gr;X.beginPath();X.arc(0,0,R,0,7);X.fill();X.restore()}
 let GC=null,GK=-1;
-let wallDepth246=[];
-function bake(g,ck){wallDepth246=[];if(!GC)GC=document.createElement('canvas');if(GC.width!==cv.width||GC.height!==cv.height){GC.width=cv.width;GC.height=cv.height}
+function bake(g,ck){if(!GC)GC=document.createElement('canvas');if(GC.width!==cv.width||GC.height!==cv.height){GC.width=cv.width;GC.height=cv.height}
  GK=ck;X=GC.getContext('2d');X.setTransform(TT_RENDER_SCALE,0,0,TT_RENDER_SCALE,0,0);X.fillStyle='#c4d6d9';X.fillRect(0,0,VW,VH);X.save();camT();
  const RL=-6000,RH=6000,tx=-2000,ty=-1800;
  // 1.69.164: césped cartoon pintado, con briznas agrupadas y relieve direccional.
@@ -2614,12 +2613,11 @@ function bake(g,ck){wallDepth246=[];if(!GC)GC=document.createElement('canvas');i
    const B=(u,v,w,d,h,z,top,side)=>horizontal?box(t.x0+u,t.y0+v,w,d,h,0,top,side,z,true):box(t.x0+v,t.y0+u,d,w,h,0,top,side,z,true);
    const P=(u,v,z)=>horizontal?pj(t.x0+u,t.y0+v,z):pj(t.x0+v,t.y0+u,z);
    const face=(u0,u1,v,z0,z1,colors)=>{const p=P(u0,v,z0),q=P(u0,v,z1),g=X.createLinearGradient(...p,...q);colors.forEach((c,i)=>g.addColorStop(i/(colors.length-1),c));poly([p,P(u1,v,z0),P(u1,v,z1),q],g);};
+   B(length/2,-3,length,12,52,0,'#e5e5da','#c2c4bb');
+   face(0,length,1,0,52,['#7c8c8e','#e5e5d9','#fff3d9']);
+   face(0,length,2,0,15,['#304e61','#527b88','#7e9da2']);
+   B(length/2,2,length,4,2,15,'#f9cc63','#bd8432');
    for(let u=40;u<length;u+=80){
-    wallDepth246.push([t.x0+t.y0+u,()=>{
-    B(u,-3,80,12,52,0,'#e5e5da','#c2c4bb');
-    face(u-40,u+40,1,0,52,['#7c8c8e','#e5e5d9','#fff3d9']);
-    face(u-40,u+40,2,0,15,['#304e61','#527b88','#7e9da2']);
-    B(u,2,80,4,2,15,'#f9cc63','#bd8432');
     face(u-36,u+36,2,19,49,['#a0b4b8','#d9e4df','#fff5e2']);
     face(u-33,u+33,2.3,22,46,['#bacbc9','#e8ece1','#f7f0df']);
     face(u-33,u+33,2.5,22,23,['#829da3','#b4c5c4']);
@@ -2628,7 +2626,6 @@ function bake(g,ck){wallDepth246=[];if(!GC)GC=document.createElement('canvas');i
     face(u-35,u-33,2.2,19,49,['#7e9697','#c2d1ca']);
     B(u,2,70,2,1,48,'#fff8e7','#c6d0c7');
     for(const q of [-32,32])for(const z of [21,46])B(u+q,3,1.8,1.5,1.8,z,'#e7ece4','#879b9a');
-    }]);
    }
    caps182.push({horizontal, fixed:horizontal?t.y0:t.x0, start:horizontal?t.x0:t.y0,end:(horizontal?t.x0:t.y0)+length});
    for(let u=0;u<=length;u+=80){
@@ -2637,7 +2634,7 @@ function bake(g,ck){wallDepth246=[];if(!GC)GC=document.createElement('canvas');i
     const along=u;
     const cx=horizontal?t.x0+along:t.x0,cy=horizontal?t.y0:t.y0+along;
      const key=cx+","+cy; if(columns180.has(key))continue;
-     columns180.set(key,[cx+cy+1,()=>{
+     columns180.set(key,()=>{
     const foot=pj(cx,cy,.35);
     X.save();X.translate(foot[0],foot[1]);X.scale(1,.5);
     const contact=X.createRadialGradient(0,0,2*K,0,0,14*K);
@@ -2653,13 +2650,13 @@ function bake(g,ck){wallDepth246=[];if(!GC)GC=document.createElement('canvas');i
     solid(17,.35,3.15,'#879da8','#455b69','#607b89');
     solid(14,3.5,44.5,'#a9bdc4','#405766','#78949f');
     solid(15,48,2,'#c2d2d1','#637e8b','#91a9b1');
-     }]);
+     });
    }
   };
   if(!hasPlot(col,row+1))facade166(true,320);
   if(!hasPlot(col-1,row))facade166(false,240);
  }
-  for(const entry of columns180.values())wallDepth246.push(entry);
+  for(const drawColumn of columns180.values())drawColumn();
  // Continuous coping: merge adjacent plot segments, including their end joints.
  caps182.sort((a,b)=>Number(a.horizontal)-Number(b.horizontal)||a.fixed-b.fixed||a.start-b.start);
  const merged182=[];for(const a of caps182){const b=merged182[merged182.length-1];if(b&&b.horizontal===a.horizontal&&b.fixed===a.fixed&&a.start<=b.end)b.end=Math.max(b.end,a.end);else merged182.push({...a});}
@@ -2667,14 +2664,13 @@ function bake(g,ck){wallDepth246=[];if(!GC)GC=document.createElement('canvas');i
  const rects183=merged182.map(a=>a.horizontal?[a.start-9,a.fixed-9,a.end+9,a.fixed+9]:[a.fixed-9,a.start-9,a.fixed+9,a.end+9]);
  const xs183=[...new Set(rects183.flatMap(r=>[r[0],r[2]]))].sort((a,b)=>a-b),ys183=[...new Set(rects183.flatMap(r=>[r[1],r[3]]))].sort((a,b)=>a-b);
  const cells183=xs183.slice(0,-1).map((x,i)=>ys183.slice(0,-1).map((y,j)=>rects183.some(r=>x>=r[0]&&xs183[i+1]<=r[2]&&y>=r[1]&&ys183[j+1]<=r[3])));
- for(let i=0;i<cells183.length;i++)for(let j=0;j<cells183[i].length;j++)if(cells183[i][j]){
- const x=xs183[i],xx=xs183[i+1],y=ys183[j],yy=ys183[j+1];
- for(let ax=x;ax<xx;ax+=40)for(let ay=y;ay<yy;ay+=40){const bx=Math.min(ax+40,xx),by=Math.min(ay+40,yy);
- wallDepth246.push([(ax+bx+ay+by)/2+49,()=>{for(const [z,top,side] of [[50,'#b8d2d5','#557887'],[53,'#e5eee7','#7696a0']]){
- if(bx===xx&&!cells183[i+1]?.[j])poly([pj(bx,ay,z),pj(bx,by,z),pj(bx,by,z+3),pj(bx,ay,z+3)],shade(side,.84));
- if(by===yy&&!cells183[i][j+1])poly([pj(bx,by,z),pj(ax,by,z),pj(ax,by,z+3),pj(bx,by,z+3)],shade(side,.64));
- const pts=[pj(ax,ay,z+3),pj(bx,ay,z+3),pj(bx,by,z+3),pj(ax,by,z+3)];poly(pts,shade(top,1.06)); X.save();X.strokeStyle=shade(top,1.06);X.lineWidth=.65;X.beginPath();X.moveTo(...pts[0]);for(const pt of pts.slice(1))X.lineTo(...pt);X.closePath();X.stroke();X.restore();
- }}]);}
+ for(const [z,top,side] of [[50,'#b8d2d5','#557887'],[53,'#e5eee7','#7696a0']]){
+  for(let i=0;i<cells183.length;i++)for(let j=0;j<cells183[i].length;j++)if(cells183[i][j]){
+   const x=xs183[i],xx=xs183[i+1],y=ys183[j],yy=ys183[j+1];
+   if(!cells183[i+1]?.[j])poly([pj(xx,y,z),pj(xx,yy,z),pj(xx,yy,z+3),pj(xx,y,z+3)],shade(side,.84));
+   if(!cells183[i][j+1])poly([pj(xx,yy,z),pj(x,yy,z),pj(x,yy,z+3),pj(xx,yy,z+3)],shade(side,.64));
+  }
+  X.beginPath();for(let i=0;i<cells183.length;i++)for(let j=0;j<cells183[i].length;j++)if(cells183[i][j]){const x=xs183[i],xx=xs183[i+1],y=ys183[j],yy=ys183[j+1];const pts=[[x,y],[xx,y],[xx,yy],[x,yy]].map(q=>pj(q[0],q[1],z+3));X.moveTo(...pts[0]);for(const pt of pts.slice(1))X.lineTo(...pt);X.closePath();}X.fillStyle=shade(top,1.06);X.fill();
  }
  // La decoración no se genera automáticamente sobre los ventanales.
  // Los paneles y carteles son objetos editables individuales (ver FURN).
@@ -2771,17 +2767,16 @@ function draw(){syncDecor232();terrainUpdate();X.clearRect(0,0,VW,VH);if(RC){X.f
  // Fachada frontal: el vano termina exactamente en los pilares del portón.
  // Evita los dos pequeños tramos de murito que antes sobresalían junto al acceso.
  const accesoIzq=249, accesoDer=391;
- // 245: low masonry follows each exposed plot edge, not the bounding rectangle.
+ // Perimeter: exposed edges only; recessed edges stop before the foreground wall.
  for(const [col,row] of S.plots){
   const t=plotRect(col,row);
   if(!hasPlot(col,row-1)){
    const spans=row===0&&col===0?[[t.x0,accesoIzq],[accesoDer,t.x1]]:[[t.x0,t.x1]];
-   for(const [desde,hasta] of spans)for(let x=desde;x<hasta;x+=40){
-    const w=Math.min(40,hasta-x);if(w>0)add(x+w/2+t.y1+4,()=>box(x+w/2,t.y1+4,w,8,10,0,'#f1f4f7','#cfd6de'));
-   }
+   for(const [a,b] of spans)for(let x=a;x<b;x+=40){const w=Math.min(40,b-x);if(w>0)add(x+w/2+t.y1+4,()=>box(x+w/2,t.y1+4,w,8,10,0,'#f1f4f7','#cfd6de'));}
   }
-  if(!hasPlot(col+1,row))for(let y=t.y0;y<t.y1;y+=40){
-   const h=Math.min(40,t.y1-y);add(t.x1+4+y+h/2,()=>box(t.x1+4,y+h/2,8,h,10,0,'#f1f4f7','#cfd6de'));
+  if(!hasPlot(col+1,row)){
+   const end=t.y1-(hasPlot(col+1,row-1)?24:0);
+   for(let y=t.y0;y<end;y+=40){const h=Math.min(40,end-y);if(h>0)add(t.x1+4+y+h/2,()=>box(t.x1+4,y+h/2,8,h,10,0,'#f1f4f7','#cfd6de'));}
   }
  }
  // Puerta seccional sugerida y marquesina de acceso en la fachada.
@@ -3012,7 +3007,7 @@ function draw(){syncDecor232();terrainUpdate();X.clearRect(0,0,VW,VH);if(RC){X.f
  // Los personajes se dibujan directamente en su entrada de escena.
  const movingDepth=chibiForegroundQueue;
  chibiForegroundQueue=null;
- I.push(...wallDepth246,...movingDepth);
+ I.push(...movingDepth);
  I.sort((a,b)=>a[0]-b[0]);I.filter(i=>i[0]<1e9).forEach(i=>i[1]());
  I.filter(i=>i[0]>=1e9).forEach(i=>i[1]());
  // Fase 1.65: señales 3D de ampliación siempre en primer plano.
