@@ -2767,12 +2767,17 @@ function draw(){syncDecor232();terrainUpdate();X.clearRect(0,0,VW,VH);if(RC){X.f
  // Fachada frontal: el vano termina exactamente en los pilares del portón.
  // Evita los dos pequeños tramos de murito que antes sobresalían junto al acceso.
  const accesoIzq=249, accesoDer=391;
- const tramosFachada=[[g.x0,Math.min(accesoIzq,g.x1)],[Math.max(accesoDer,g.x0),g.x1]];
- for(const [desde,hasta] of tramosFachada){
-  for(let x=desde;x<hasta;x+=40){
-   const ancho=Math.min(40,hasta-x);
-   if(ancho<=0)continue;
-   add(x+ancho/2+g.y1+4,()=>box(x+ancho/2,g.y1+4,ancho,8,10,0,'#f1f4f7','#cfd6de'));
+ // 245: low masonry follows each exposed plot edge, not the bounding rectangle.
+ for(const [col,row] of S.plots){
+  const t=plotRect(col,row);
+  if(!hasPlot(col,row-1)){
+   const spans=row===0&&col===0?[[t.x0,accesoIzq],[accesoDer,t.x1]]:[[t.x0,t.x1]];
+   for(const [desde,hasta] of spans)for(let x=desde;x<hasta;x+=40){
+    const w=Math.min(40,hasta-x);if(w>0)add(x+w/2+t.y1+4,()=>box(x+w/2,t.y1+4,w,8,10,0,'#f1f4f7','#cfd6de'));
+   }
+  }
+  if(!hasPlot(col+1,row))for(let y=t.y0;y<t.y1;y+=40){
+   const h=Math.min(40,t.y1-y);add(t.x1+4+y+h/2,()=>box(t.x1+4,y+h/2,8,h,10,0,'#f1f4f7','#cfd6de'));
   }
  }
  // Puerta seccional sugerida y marquesina de acceso en la fachada.
@@ -2797,7 +2802,7 @@ function draw(){syncDecor232();terrainUpdate();X.clearRect(0,0,VW,VH);if(RC){X.f
    X.translate(...p);X.transform(1,.5,0,1,0,0);X.fillText(name,0,0,maxWidth);X.restore();
   });
  }
- for(let y=g.y0;y<g.y1;y+=40)add(g.x1+4+y+20,()=>box(g.x1+4,y+20,8,40,10,0,'#f1f4f7','#cfd6de'));
+
  [249,391].forEach(x=>add(-800000090+x,()=>{box(x,g.y1+4,9,10,36,0,'#ffc933');box(x,g.y1+4,10,11,6,0,'#1d2733','#1d2733',12);box(x,g.y1+4,10,11,6,0,'#1d2733','#1d2733',26)}));
  // Farolas ancladas al borde exterior del conjunto, nunca en el interior de una ampliación.
  // Cada módulo de fachada mantiene una farola propia y se recalcula al comprar terrenos.
