@@ -864,7 +864,7 @@ function openPlotAction(c,r){
  terrainDialog('🏗️ Agregar al garaje','Terreno limpio. Incorporá esta parcela a tu garaje para ampliar el taller.',cost,null,()=>{
   if(!canPlot(c,r)||terrainStatus(c,r)!=='ready')return;
   if(S.m<cost){toast('Necesitás $'+f(cost)+' para ampliar');return}
-  S.m-=cost;S.plots.push([c,r]);S.u.g=S.plots.length-1;S.u.rec=S.u.rec||0;
+  freezeExpansion244();S.m-=cost;S.plots.push([c,r]);S.u.g=S.plots.length-1;S.u.rec=S.u.rec||0;
   camG=-1;GK=-1;save();refresh(1);toast('🏗️ ¡Parcela incorporada! '+S.plots.length+'/132');
  });
 }
@@ -935,6 +935,17 @@ function G(){const north=S.plots.filter(p=>p[1]>=0),cols=north.map(p=>p[0]),rows
 
 // Punto de anclaje REAL: nunca combinar extremos de parcelas distintas
 // (en ampliaciones en L esa esquina podría quedar fuera del edificio).
+// 244: freeze existing world positions before changing the building footprint.
+function freezeExpansion244(){
+ const positions={};
+ for(const k of Object.keys(FURN)){
+  if(!furnitureExists(k))continue;
+  positions[k]=[...furniturePos(k)];
+ }
+ Object.assign(S.furniture,positions);
+ if(!S.fixedProps244)S.fixedProps244={...backWallAnchor()};
+}
+function fixedPropsAnchor244(){return S.fixedProps244||backWallAnchor();}
 function backWallAnchor(){
  const row=Math.max(...S.plots.map(p=>p[1]));
  const candidates=S.plots.filter(p=>p[1]===row).sort((a,b)=>b[0]-a[0]);
@@ -2891,9 +2902,9 @@ function draw(){syncDecor232();terrainUpdate();X.clearRect(0,0,VW,VH);if(RC){X.f
  }
  posts.slice(2).forEach(post);
  })})}
- {const a=backWallAnchor(),x=a.x0+88,y=a.y0+28;add(x+y,()=>{cyl(x,y,12,4.2,16,'#e8452c','#c9372a');box(x,y,3,3,4,0,'#22262c','#22262c',28)})}
- {const a=backWallAnchor(),x=a.x0+150,y=a.y0+55;add(x+y,()=>{furnitureGroundShadow(x,y,28,24,.19);for(let z=0;z<3;z++)tire(x,y,z*9)})}
- [[210,14],[226,16]].forEach((o,i)=>{const a=backWallAnchor(),x=a.x0+Math.min(o[0],185),y=a.y0+o[1]+55;add(x+y,()=>{furnitureGroundShadow(x,y,23,20,.15);drum(x,y,i)})});
+ {const a=fixedPropsAnchor244(),x=a.x0+88,y=a.y0+28;add(x+y,()=>{cyl(x,y,12,4.2,16,'#e8452c','#c9372a');box(x,y,3,3,4,0,'#22262c','#22262c',28)})}
+ {const a=fixedPropsAnchor244(),x=a.x0+150,y=a.y0+55;add(x+y,()=>{furnitureGroundShadow(x,y,28,24,.19);for(let z=0;z<3;z++)tire(x,y,z*9)})}
+ [[210,14],[226,16]].forEach((o,i)=>{const a=fixedPropsAnchor244(),x=a.x0+Math.min(o[0],185),y=a.y0+o[1]+55;add(x+y,()=>{furnitureGroundShadow(x,y,23,20,.15);drum(x,y,i)})});
  for(let i=0;i<Math.min(5,S.u.t);i++){const id='tool'+i,p=furniturePos(id);add(p[0]+p[1],()=>{furnitureGroundShadow(...p,36,30,.12);withFurniture(id,()=>workStation135(...p,i))});}
  // Los paneles de herramientas flotantes se omiten: los equipos físicos siguen visibles.
  {const a=furniturePos('sofa1'),b=furniturePos('sofa2'),c=furniturePos('table');
@@ -3127,7 +3138,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-t],[data-a
  if(a==='clear-obstacle'){const [c,r,k]=i.split(',').map(Number);if(!canPlot(c,r))return;const o=plotObstacles(c,r)[k];if(!o||o.done||o.until||S.m<o.cost)return;S.m-=o.cost;o.until=Date.now()+terrainRemovalSeconds(o)*1000;save();refresh(1);toast('Retirando '+obstacleName(o));return}
  if(a==='plot'){const [col,row]=i.split(',').map(Number),n=S.plots.length,c=Math.round(UPS[0].c(n-1));
   if(n>=132||!canPlot(col,row)||terrainStatus(col,row)!=='ready'||S.m<c)return;
-  S.m-=c;S.plots.push([col,row]);S.u.g=S.plots.length-1;S.u.rec=S.u.rec||0;
+  freezeExpansion244();S.m-=c;S.plots.push([col,row]);S.u.g=S.plots.length-1;S.u.rec=S.u.rec||0;
   camG=S.u.g;GK=-1;toast('¡Nueva parcela comprada! '+S.plots.length+'/132');
  }
  else if(a==='accept'){acceptJob(+i);return}
